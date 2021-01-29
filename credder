@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#from __future__ import print_function
+
+import sys
+import argparse
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-n', '--ntlm', help='show all accounts with this NTLM hash', required=False)
+#parser.add_argument('-s', '--statistics', help='show some statistics', required=False, default=False, action='store_true')
+parser.add_argument('-c', '--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
+parser.add_argument('secretsdumpoutput', metavar='<output from secertsdump.py>', help='Output from secretsdump.py -ntds ...', type=argparse.FileType('r'))
+parser.add_argument('enabledusers', metavar='<list of enabled users>', help='maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
+parser.add_argument('cracked', metavar='<output from hashcat>', help='take a hashcat ... -show', type=argparse.FileType('r'))
+args = parser.parse_args()
+
+secretsdumpLines = args.secretsdumpoutput.readlines()
+crackedLines = args.cracked.readlines()
+
+def getNTLM(user):
+  user = user.lower()
+  for index, value in enumerate(secretsdumpLines):
+    line = value.lower()
+    if ':::' in line:
+      parts = line.split(':')
+      if len(parts) == 7:
+
+        if '\\\\' in parts[0]:
+          subparts = parts[0].split('\\\\') 
+          if subparts[1] == user:
+            return parts[3].replace('\n','')
+        elif '\\' in parts[0]:
+          subparts = parts[0].split('\\')
+          if subparts[1] == user:
+            return parts[3].replace('\n','')
+
+        else:
+          if parts[0].lower() == user:
+            del secretsdumpLines[index]
+            return parts[3].replace('\n','')
+      else:
+        print('there is something wrong with your secretsdump.py dump! (2)', file=sys.stderr)
+        sys.exit(2)
+
+  return None
+
+def getCleartext(ntlm):
+  global crackedLines
+
+  ntlm = ntlm.lower()
+		
+  for line in crackedLines:
+    line = line.lower().replace('\n','')
+    if ntlm in line:
+      parts = line.split(':')
+      if len(parts) == 2:
+        return parts[1]
+      else:
+        print('there is something wrong with your hashcat output! (3)', file=sys.stderr)
+        sys.exit(3)
+  return None
+
+
+enabledLines = args.enabledusers.readlines()
+
+
+for user in enabledLines:
+  user = user.replace('\n', '')
+  ntlm = getNTLM(user)
+  if args.ntlm and ntlm != args.ntlm.lower():
+    continue
+
+  if ntlm:
+    cleartext = getCleartext(ntlm)
+    if cleartext:
+      print(user + ' ' + ntlm + ' ' + cleartext)
+    else:
+      if not args.cracked_only:
+        print(user + ' ' + ntlm)
+
+
+
+if args.statistics:
+  print()
+  print('STATS')
+  print(str(cracked) + '/' + str(len(enabledLines)) + ' ' + str(cracked/len(enabledLines) * 100)  + ' % cracked (of enabled accounts)')
