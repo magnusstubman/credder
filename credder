@@ -52,32 +52,6 @@ def parseDumpLine(line):
       return (domain, username, ntlm)
   return None
 
-def getNTLM(user, dumpLines):
-  user = user.lower()
-  for index, value in enumerate(dumpLines):
-    line = value.lower()
-    if ':::' in line:
-      parts = line.split(':')
-      if len(parts) == 7:
-
-        if '\\\\' in parts[0]:
-          subparts = parts[0].split('\\\\') 
-          if subparts[1] == user:
-            return parts[3].replace('\n','')
-        elif '\\' in parts[0]:
-          subparts = parts[0].split('\\')
-          if subparts[1] == user:
-            return parts[3].replace('\n','')
-
-        else:
-          if parts[0].lower() == user:
-            #del dumpLines[index]
-            return parts[3].replace('\n','')
-      else:
-        print('there is something wrong with your secretsdump.py dump! (2)', file=sys.stderr)
-        sys.exit(2)
-
-  return None
 
 def getCleartext(ntlm, crackedLines):
 
