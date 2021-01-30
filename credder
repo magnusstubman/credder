@@ -5,21 +5,52 @@
 import sys
 import argparse
 
-
 parser = argparse.ArgumentParser()
-
-
-parser.add_argument('-sn', '--search-ntlm', help='show all accounts with this NTLM hash', required=False, nargs=1)
+parser.add_argument('-no', '--ntlm-only', help='only show NTLM hashes (unique only and sorted)', default=False, required=False, action='store_true')
+parser.add_argument('-sn', '--search-ntlm', metavar='<NTLM>', help='show all accounts with specified NTLM hash', required=False)
 parser.add_argument('-co', '--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
-parser.add_argument('-d', '--dump', metavar='<output from secertsdump.py>', help='Output from secretsdump.py -ntds ... -system ... LOCAL > dump.txt', type=argparse.FileType('r'))
-parser.add_argument('-e', '--enabled-users', metavar='<list of enabled users>', help='maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
-parser.add_argument('-c', '--cracked', metavar='<output from hashcat>', help='take a hashcat --show', type=argparse.FileType('r'))
+parser.add_argument('-sm', '--show-machines', help='show machine accounts as well', required=False, default=False, action='store_true')
+parser.add_argument('-csv', help='print comma separated', required=False, default=False, action='store_true')
+parser.add_argument('-d', '--dump', metavar='<output from secertsdump.py>.txt', help='Output from secretsdump.py -ntds ... -system ... LOCAL > dump.txt', type=argparse.FileType('r'))
+parser.add_argument('-e', '--enabled-users', metavar='<list of enabled users>.txt', help='Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
+parser.add_argument('-c', '--cracked-hashes', metavar='<output from hashcat>.txt', help='take a hashcat --show', type=argparse.FileType('r'))
 args = parser.parse_args()
 
+def pr(domain, username, ntlm, cleartext):
+  if username and not args.show_machines and '$' in username:
+    return None
+
+  if args.cracked_only and not cleartext:
+    return None
+
+  delimiter = ' '
+  if args.csv:
+    delimiter = ','
+
+  s = [] 
+  if username:
+    s.append(username)
+  if ntlm:
+    s.append(ntlm)
+  if cleartext:
+    s.append(cleartext)
+
+  print(delimiter.join(s))
 
 
-
-
+def parseDumpLine(line):
+  if ':::' in line:
+    parts = line.split(':')
+    if len(parts) == 7:
+      domain = None 
+      username = parts[0] 
+      ntlm = parts[3]
+      if '\\' in parts[0]:
+        subparts = parts[0].split('\\')
+        domain = subparts[0]
+        username = subparts[1]
+      return (domain, username, ntlm)
+  return None
 
 def getNTLM(user, dumpLines):
   user = user.lower()
@@ -63,26 +94,53 @@ def getCleartext(ntlm, crackedLines):
         sys.exit(3)
   return None
 
+def readLines(f):
+  if f:
+    f.seek(0)
+    l = f.readlines()
+    l = [x.lower() for x in l]
+    l = [x.replace('\n', '') for x in l]
+    return l
 
-if args.dump and args.enabled_users and args.cracked:
-  dumpLines = args.dump.readlines()
-  crackedLines = args.cracked.readlines()
-  enabledLines = args.enabled_users.readlines()
+dumpLines = readLines(args.dump)
+enabledLines = readLines(args.enabled_users)
+crackedLines = readLines(args.cracked_hashes)
 
+ntlmOnlyList = []
+if args.dump:
+  for line in dumpLines:
+    parts = parseDumpLine(line)
+    if parts:
+      domain, username, ntlm = parts 
 
-  for user in enabledLines:
-    user = user.replace('\n', '')
-    ntlm = getNTLM(user, dumpLines)
-    if args.search_ntlm and ntlm != args.search_ntlm.lower():
-      continue
+      if args.search_ntlm:
+        if not ntlm == args.search_ntlm:
+          continue
 
-    if ntlm:
-      cleartext = getCleartext(ntlm, crackedLines)
-      if cleartext:
-        print(user + ' ' + ntlm + ' ' + cleartext)
-      else:
-        if not args.cracked_only:
-          print(user + ' ' + ntlm)
+      if username and (not args.show_machines) and ('$' in username):
+        continue
 
+      if args.enabled_users:
+        if not username in enabledLines:
+          continue
 
+      cleartext = None
+      if ntlm and args.cracked_hashes:
+        cleartext = getCleartext(ntlm, crackedLines)
+
+      if args.ntlm_only:
+        if ntlm:
+          if args.cracked_only and not cleartext:
+            continue
+
+          if ntlm not in ntlmOnlyList:
+            ntlmOnlyList.append(ntlm)
+        continue
+
+      pr(domain, username, ntlm, cleartext)
+
+if args.ntlm_only:
+  ntlmOnlyList.sort()
+  for ntlm in ntlmOnlyList:
+    pr(None, None, ntlm, None)
 
