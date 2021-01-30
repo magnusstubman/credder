@@ -8,20 +8,22 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-n', '--ntlm', help='show all accounts with this NTLM hash', required=False)
-#parser.add_argument('-s', '--statistics', help='show some statistics', required=False, default=False, action='store_true')
-parser.add_argument('-c', '--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
-parser.add_argument('secretsdumpoutput', metavar='<output from secertsdump.py>', help='Output from secretsdump.py -ntds ...', type=argparse.FileType('r'))
-parser.add_argument('enabledusers', metavar='<list of enabled users>', help='maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
-parser.add_argument('cracked', metavar='<output from hashcat>', help='take a hashcat ... -show', type=argparse.FileType('r'))
+
+parser.add_argument('-sn', '--search-ntlm', help='show all accounts with this NTLM hash', required=False, nargs=1)
+parser.add_argument('-co', '--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
+parser.add_argument('-d', '--dump', metavar='<output from secertsdump.py>', help='Output from secretsdump.py -ntds ... -system ... LOCAL > dump.txt', type=argparse.FileType('r'))
+parser.add_argument('-e', '--enabled-users', metavar='<list of enabled users>', help='maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
+parser.add_argument('-c', '--cracked', metavar='<output from hashcat>', help='take a hashcat --show', type=argparse.FileType('r'))
 args = parser.parse_args()
 
-secretsdumpLines = args.secretsdumpoutput.readlines()
-crackedLines = args.cracked.readlines()
 
-def getNTLM(user):
+
+
+
+
+def getNTLM(user, dumpLines):
   user = user.lower()
-  for index, value in enumerate(secretsdumpLines):
+  for index, value in enumerate(dumpLines):
     line = value.lower()
     if ':::' in line:
       parts = line.split(':')
@@ -38,7 +40,7 @@ def getNTLM(user):
 
         else:
           if parts[0].lower() == user:
-            del secretsdumpLines[index]
+            #del dumpLines[index]
             return parts[3].replace('\n','')
       else:
         print('there is something wrong with your secretsdump.py dump! (2)', file=sys.stderr)
@@ -46,8 +48,7 @@ def getNTLM(user):
 
   return None
 
-def getCleartext(ntlm):
-  global crackedLines
+def getCleartext(ntlm, crackedLines):
 
   ntlm = ntlm.lower()
 		
@@ -63,26 +64,25 @@ def getCleartext(ntlm):
   return None
 
 
-enabledLines = args.enabledusers.readlines()
+if args.dump and args.enabled_users and args.cracked:
+  dumpLines = args.dump.readlines()
+  crackedLines = args.cracked.readlines()
+  enabledLines = args.enabled_users.readlines()
 
 
-for user in enabledLines:
-  user = user.replace('\n', '')
-  ntlm = getNTLM(user)
-  if args.ntlm and ntlm != args.ntlm.lower():
-    continue
+  for user in enabledLines:
+    user = user.replace('\n', '')
+    ntlm = getNTLM(user, dumpLines)
+    if args.search_ntlm and ntlm != args.search_ntlm.lower():
+      continue
 
-  if ntlm:
-    cleartext = getCleartext(ntlm)
-    if cleartext:
-      print(user + ' ' + ntlm + ' ' + cleartext)
-    else:
-      if not args.cracked_only:
-        print(user + ' ' + ntlm)
+    if ntlm:
+      cleartext = getCleartext(ntlm, crackedLines)
+      if cleartext:
+        print(user + ' ' + ntlm + ' ' + cleartext)
+      else:
+        if not args.cracked_only:
+          print(user + ' ' + ntlm)
 
 
 
-if args.statistics:
-  print()
-  print('STATS')
-  print(str(cracked) + '/' + str(len(enabledLines)) + ' ' + str(cracked/len(enabledLines) * 100)  + ' % cracked (of enabled accounts)')
