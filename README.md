@@ -9,10 +9,10 @@ $ secretsdump.py -ntds NTDS.dit -system SYSTEM LOCAL > dump.txt
 $ ./credder demo/dump.txt --ntlm-only --uniq > ntlm.txt
 $ hashcat -a 0 -m 1000 ntlm.txt wordlist.txt 
 $ hashcat -m 1000 ntlm.txt --show > cracked.txt
-$ # OPTIONAL: <collect a list of enabled users> > enabled-users.txt
-$ # MATCH (n:User) WHERE n.enabled = TRUE RETURN n
 ```
-and then:
+(Optional: collect a list of enabled users, e.g. BloodHound could be of help: `MATCH (n:User) WHERE n.enabled = TRUE RETURN n`)
+
+And then:
 
 ```
 $ ./credder dump.txt -e enabled-users.txt -c cracked.txt
