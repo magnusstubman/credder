@@ -13,6 +13,7 @@ parser.add_argument('--username-only', help='only show usernames', default=False
 parser.add_argument('--ntlm-only', help='only show NTLM hashes', default=False, required=False, action='store_true')
 parser.add_argument('--cleartext-only', help='only show cleartext', default=False, required=False, action='store_true')
 parser.add_argument('--search-ntlm', metavar='<NTLM>', help='show all accounts with specified NTLM hash', required=False)
+parser.add_argument('--search-cleartext', metavar='<password>', help='show all accounts with specified cleartext password', required=False)
 parser.add_argument('--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
 parser.add_argument('--uncracked-only', help='only show uncracked accounts', required=False, default=False, action='store_true')
 parser.add_argument('-im', '--include-machines', help='include machine accounts as well', required=False, default=False, action='store_true')
@@ -111,7 +112,6 @@ dumpLines = readLines(args.dump)
 enabledLines = readLines(args.enabled_users)
 crackedLines = readLines(args.cracked_hashes)
 
-#ntlmOnlyList = []
 if args.dump:
   for line in dumpLines:
     parts = parseDumpLine(line)
@@ -133,24 +133,12 @@ if args.dump:
       if ntlm and args.cracked_hashes:
         cleartext = getCleartext(ntlm, crackedLines)
 
-#      if args.ntlm_only:
-#        if ntlm:
-#          if args.cracked_only and not cleartext:
-#              continue
-
-#          if args.uncracked_only and cleartext:
-#              continue
-#
-#          if ntlm not in ntlmOnlyList:
-#            ntlmOnlyList.append(ntlm)
-#        continue
+      if args.search_cleartext:
+        if not cleartext == args.search_cleartext:
+          continue
 
       pr(domain, username, ntlm, cleartext)
 
-#if args.ntlm_only:
-#  ntlmOnlyList.sort()
-#  for ntlm in ntlmOnlyList:
-#    print(ntlm)
 
 if args.sort or args.uniq:
   if args.sort:
