@@ -10,7 +10,6 @@ $ ./credder demo/dump.txt --ntlm-only --uniq > ntlm.txt
 $ hashcat -a 0 -m 1000 ntlm.txt wordlist.txt 
 $ hashcat -m 1000 ntlm.txt --show > cracked.txt
 ```
-(Optional: collect a list of enabled users, e.g. BloodHound could be of help: `MATCH (n:User) WHERE n.enabled = TRUE RETURN n`)
 
 And then:
 
@@ -22,6 +21,8 @@ normaluser 53bc35258864c4be92521f1cffabb33f lakrids 89
 testmj 7841157eb085b14b305b7461bba79d30
 benny 31d6cfe0d16ae931b73c59d7e0c089c0
 ```
+
+(Optional: collect a list of enabled users, e.g. BloodHound could be of help: `MATCH (n:User) WHERE n.enabled = TRUE RETURN n`)
 
 
 Full usage:
