@@ -1,6 +1,6 @@
 # credder
 
-Tool to parse the output from Impacke's secretsdump.py output of NTDS.dit files.
+Tool to parse the output from Impacket's secretsdump.py output of NTDS.dit files.
 
 E.g. a workflow could be
 
