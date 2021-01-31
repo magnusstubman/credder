@@ -9,19 +9,29 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--dump', metavar='<output from secertsdump.py>.txt', help='Output from secretsdump.py -ntds ... -system ... LOCAL > dump.txt', type=argparse.FileType('r'), required=True)
 parser.add_argument('-e', '--enabled-users', metavar='<list of enabled users>.txt', help='Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
 parser.add_argument('-c', '--cracked-hashes', metavar='<output from hashcat>.txt', help='take a hashcat --show', type=argparse.FileType('r'))
+#parser.add_argument('-uo', '--username-only', help='only show usernames (sorted)', default=False, required=False, action='store_true')
 parser.add_argument('-no', '--ntlm-only', help='only show NTLM hashes (unique only and sorted)', default=False, required=False, action='store_true')
+#parser.add_argument('-co', '--cleartext-only', help='only show cleartext (unique only and sorted)', default=False, required=False, action='store_true')
 parser.add_argument('-sn', '--search-ntlm', metavar='<NTLM>', help='show all accounts with specified NTLM hash', required=False)
-parser.add_argument('-co', '--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
-parser.add_argument('-uo', '--uncracked-only', help='only show uncracked accounts', required=False, default=False, action='store_true')
+parser.add_argument('--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
+parser.add_argument('--uncracked-only', help='only show uncracked accounts', required=False, default=False, action='store_true')
 parser.add_argument('-im', '--include-machines', help='include machine accounts as well', required=False, default=False, action='store_true')
 parser.add_argument('-csv', help='print comma separated', required=False, default=False, action='store_true')
 args = parser.parse_args()
+
+if (args.cracked_only or args.uncracked_only) and not args.cracked_hashes:
+  print('can\'t have --cracked-only or --uncracked-only without -c!')
+  sys.exit(1)
+  
 
 def pr(domain, username, ntlm, cleartext):
   if username and not args.include_machines and '$' in username:
     return None
 
   if args.cracked_only and not cleartext:
+    return None
+
+  if args.uncracked_only and cleartext:
     return None
 
   delimiter = ' '
@@ -108,6 +118,9 @@ if args.dump:
           if args.cracked_only and not cleartext:
               continue
 
+          if args.uncracked_only and cleartext:
+              continue
+
           if ntlm not in ntlmOnlyList:
             ntlmOnlyList.append(ntlm)
         continue
@@ -117,5 +130,5 @@ if args.dump:
 if args.ntlm_only:
   ntlmOnlyList.sort()
   for ntlm in ntlmOnlyList:
-    pr(None, None, ntlm, ' ')
+    print(ntlm)
 
