@@ -8,19 +8,25 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('dump', metavar='<output from secertsdump.py>.txt', help='Output from secretsdump.py -ntds ... -system ... LOCAL > dump.txt', type=argparse.FileType('r'))
 parser.add_argument('-e', '--enabled-users', metavar='<list of enabled users>.txt', help='Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n', type=argparse.FileType('r'))
-parser.add_argument('-c', '--cracked-hashes', metavar='<output from hashcat>.txt', help='take a hashcat --show', type=argparse.FileType('r'))
+parser.add_argument('-c', '--cracked-hashes', metavar='<output from hashcat>.txt', help='Used to show cleartext passwords. File must matc houtput of hashcat --show', type=argparse.FileType('r'))
 parser.add_argument('--username-only', help='only show usernames', default=False, required=False, action='store_true')
 parser.add_argument('--ntlm-only', help='only show NTLM hashes', default=False, required=False, action='store_true')
 parser.add_argument('--cleartext-only', help='only show cleartext', default=False, required=False, action='store_true')
-parser.add_argument('--search-ntlm', metavar='<NTLM>', help='show all accounts with specified NTLM hash', required=False)
-parser.add_argument('--search-cleartext', metavar='<password>', help='show all accounts with specified cleartext password', required=False)
-parser.add_argument('--cracked-only', help='only show cracked accounts', required=False, default=False, action='store_true')
-parser.add_argument('--uncracked-only', help='only show uncracked accounts', required=False, default=False, action='store_true')
-parser.add_argument('-im', '--include-machines', help='include machine accounts as well', required=False, default=False, action='store_true')
+parser.add_argument('--search-ntlm', metavar='<NTLM>', help='show all with specified NTLM hash', required=False)
+parser.add_argument('--min-cleartext-length', metavar='<N>', help='show all where cleartext is at least N characters long', required=False, type=int)
+parser.add_argument('--max-cleartext-length', metavar='<N>', help='show all where cleartext is at least N characters long', required=False, type=int)
+parser.add_argument('--search-cleartext', metavar='<password>', help='show all with specified cleartext password', required=False)
+parser.add_argument('--cracked-only', help='only show cracked', required=False, default=False, action='store_true')
+parser.add_argument('--uncracked-only', help='only show uncracked', required=False, default=False, action='store_true')
+parser.add_argument('-im', '--include-machines', help='include machine as well', required=False, default=False, action='store_true')
 parser.add_argument('-csv', help='print comma separated', required=False, default=False, action='store_true')
 parser.add_argument('--sort', help='sort output', required=False, default=False, action='store_true')
 parser.add_argument('--uniq', help='omit repeated output lines', required=False, default=False, action='store_true')
 args = parser.parse_args()
+
+if (args.min_cleartext_length or args.max_cleartext_length) and not args.cracked_hashes:
+  print('can\'t have --min-cleartext-length or --max-cleartext-length without --cracked-hashes!')
+  sys.exit(1)
 
 if (args.cracked_only or args.uncracked_only) and not args.cracked_hashes:
   print('can\'t have --cracked-only or --uncracked-only without -c!')
@@ -36,6 +42,15 @@ if args.uncracked_only and args.cleartext_only:
 
 output = []
 def pr(domain, username, ntlm, cleartext):
+  if cleartext:
+    if args.min_cleartext_length:
+      if len(cleartext) < args.min_cleartext_length:
+        return
+
+    if args.max_cleartext_length:
+      if len(cleartext) > args.max_cleartext_length:
+        return
+
   if username and not args.include_machines and '$' in username:
     return
 
@@ -90,7 +105,7 @@ def getCleartext(ntlm, crackedLines):
   ntlm = ntlm.lower()
 		
   for line in crackedLines:
-    line = line.lower().replace('\n','')
+    line = line.replace('\n','')
     if ntlm in line:
       parts = line.split(':')
       if len(parts) == 2:
@@ -100,17 +115,18 @@ def getCleartext(ntlm, crackedLines):
         sys.exit(3)
   return None
 
-def readLines(f):
+def readLines(f, lower):
   if f:
     f.seek(0)
     l = f.readlines()
-    l = [x.lower() for x in l]
+    if lower:
+      l = [x.lower() for x in l]
     l = [x.replace('\n', '') for x in l]
     return l
 
-dumpLines = readLines(args.dump)
-enabledLines = readLines(args.enabled_users)
-crackedLines = readLines(args.cracked_hashes)
+dumpLines = readLines(args.dump, True)
+enabledLines = readLines(args.enabled_users, True)
+crackedLines = readLines(args.cracked_hashes, False)
 
 if args.dump:
   for line in dumpLines:
