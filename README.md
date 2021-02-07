@@ -32,6 +32,8 @@ lwp 31d6cfe0d16ae931b73c59d7e0c089c0
 bwp fbc0ebd7bdc6cf4f58764cec3758930c
 da 839e9d3dc9b0602a6fa2ad8b5ba18939
 jump-admin 3f5a1b96956dfd4e799c26412ce1b456
+$ ./credder dump.txt -c cracked.txt --stats
+5/22 (22.73 %) cracked
 ```
 
 (Optional: collect a list of enabled users, e.g. BloodHound could be of help: `MATCH (n:User) WHERE n.enabled = TRUE RETURN n`)
@@ -40,8 +42,15 @@ jump-admin 3f5a1b96956dfd4e799c26412ce1b456
 Full usage:
 
 ```
-usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [--username-only] [--ntlm-only] [--cleartext-only] [--search-ntlm <NTLM>] [--search-cleartext <password>]
-               [--cracked-only] [--uncracked-only] [-im] [-csv] [--sort] [--uniq]
+usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [--username-only] [--ntlm-only]
+               [--cleartext-only] [--search-ntlm <NTLM>] [--min-cleartext-length <N>] [--max-cleartext-length <N>]
+               [--search-cleartext <password>] [--cracked-only] [--uncracked-only] [-im] [--csv] [--sort] [--uniq] [--stats]
+               <output from secertsdump.py>.txt
+credder: error: the following arguments are required: <output from secertsdump.py>.txt
+~/projects/credder $ ./credder -h
+usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [--username-only] [--ntlm-only]
+               [--cleartext-only] [--search-ntlm <NTLM>] [--min-cleartext-length <N>] [--max-cleartext-length <N>]
+               [--search-cleartext <password>] [--cracked-only] [--uncracked-only] [-im] [--csv] [--sort] [--uniq] [--stats]
                <output from secertsdump.py>.txt
 
 positional arguments:
@@ -51,20 +60,26 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -e <list of enabled users>.txt, --enabled-users <list of enabled users>.txt
-                        Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n
+                        Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled =
+                        TRUE RETURN n
   -c <output from hashcat>.txt, --cracked-hashes <output from hashcat>.txt
-                        take a hashcat --show
+                        Used to show cleartext passwords. File must matc houtput of hashcat --show
   --username-only       only show usernames
   --ntlm-only           only show NTLM hashes
   --cleartext-only      only show cleartext
-  --search-ntlm <NTLM>  show all accounts with specified NTLM hash
+  --search-ntlm <NTLM>  show all with specified NTLM hash
+  --min-cleartext-length <N>
+                        show all where cleartext is at least N characters long
+  --max-cleartext-length <N>
+                        show all where cleartext is at least N characters long
   --search-cleartext <password>
-                        show all accounts with specified cleartext password
-  --cracked-only        only show cracked accounts
-  --uncracked-only      only show uncracked accounts
+                        show all with specified cleartext password
+  --cracked-only        only show cracked
+  --uncracked-only      only show uncracked
   -im, --include-machines
-                        include machine accounts as well
-  -csv                  print comma separated
+                        include machine as well
+  --csv                 print comma separated
   --sort                sort output
   --uniq                omit repeated output lines
+  --stats               show some statistics
 ```
