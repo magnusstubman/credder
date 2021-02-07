@@ -19,10 +19,16 @@ parser.add_argument('--search-cleartext', metavar='<password>', help='show all w
 parser.add_argument('--cracked-only', help='only show cracked', required=False, default=False, action='store_true')
 parser.add_argument('--uncracked-only', help='only show uncracked', required=False, default=False, action='store_true')
 parser.add_argument('-im', '--include-machines', help='include machine as well', required=False, default=False, action='store_true')
-parser.add_argument('-csv', help='print comma separated', required=False, default=False, action='store_true')
+parser.add_argument('--csv', help='print comma separated', required=False, default=False, action='store_true')
 parser.add_argument('--sort', help='sort output', required=False, default=False, action='store_true')
 parser.add_argument('--uniq', help='omit repeated output lines', required=False, default=False, action='store_true')
+parser.add_argument('--stats', help='show some statistics', required=False, default=False, action='store_true')
 args = parser.parse_args()
+
+
+if args.stats and not args.cracked_hashes:
+  print('stats require --cracked-hashes!')
+  sys.exit(1)
 
 if (args.min_cleartext_length or args.max_cleartext_length) and not args.cracked_hashes:
   print('can\'t have --min-cleartext-length or --max-cleartext-length without --cracked-hashes!')
@@ -40,8 +46,13 @@ if args.uncracked_only and args.cleartext_only:
   print('it makes no sense to have both --uncracked-only and --cleartext-only')
   sys.exit(1)
 
+accounts = 0
+cracked = 0
 output = []
 def pr(domain, username, ntlm, cleartext):
+  global accounts
+  global cracked
+
   if cleartext:
     if args.min_cleartext_length:
       if len(cleartext) < args.min_cleartext_length:
@@ -67,9 +78,12 @@ def pr(domain, username, ntlm, cleartext):
     s.append(ntlm)
   if cleartext and not args.username_only and not args.ntlm_only:
     s.append(cleartext)
+    cracked += 1
 
   if len(s) == 0:
     return
+
+  accounts += 1
 
   delimiter = ' '
   if args.csv:
@@ -81,7 +95,7 @@ def pr(domain, username, ntlm, cleartext):
     if args.uniq and line in output:
       return
     output.append(line)
-  else:
+  elif not args.stats:
     print(line)
 
 
@@ -156,8 +170,11 @@ if args.dump:
       pr(domain, username, ntlm, cleartext)
 
 
-if args.sort or args.uniq:
-  if args.sort:
-    output.sort()
-  for line in output:
-    print(line)
+if not args.stats:
+  if args.sort or args.uniq:
+    if args.sort:
+      output.sort()
+    for line in output:
+      print(line)
+else:
+  print(str(cracked) + '/' + str(accounts) + ' (' + str(round((cracked / accounts)*100, 2)) + ' %) cracked')
