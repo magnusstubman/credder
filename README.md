@@ -42,14 +42,8 @@ $ ./credder dump.txt -c cracked.txt --stats
 Full usage:
 
 ```
-usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [--username-only] [--ntlm-only]
-               [--cleartext-only] [--search-ntlm <NTLM>] [--min-cleartext-length <N>] [--max-cleartext-length <N>]
-               [--search-cleartext <password>] [--cracked-only] [--uncracked-only] [-im] [--csv] [--sort] [--uniq] [--stats]
-               <output from secertsdump.py>.txt
-credder: error: the following arguments are required: <output from secertsdump.py>.txt
-~/projects/credder $ ./credder -h
-usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [--username-only] [--ntlm-only]
-               [--cleartext-only] [--search-ntlm <NTLM>] [--min-cleartext-length <N>] [--max-cleartext-length <N>]
+$ ./credder -h
+usage: credder [-h] [-e <list of enabled users>.txt] [-c <output from hashcat>.txt] [-cc <output from proprietary tool>.csv] [--username-only] [--ntlm-only] [--cleartext-only] [--search-ntlm <NTLM>] [--min-cleartext-length <N>] [--max-cleartext-length <N>]
                [--search-cleartext <password>] [--cracked-only] [--uncracked-only] [-im] [--csv] [--sort] [--uniq] [--stats]
                <output from secertsdump.py>.txt
 
@@ -60,10 +54,11 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -e <list of enabled users>.txt, --enabled-users <list of enabled users>.txt
-                        Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled =
-                        TRUE RETURN n
+                        Used to only show enabled accounts. Maybe get this from bloodhound? MATCH (n:User) WHERE n.enabled = TRUE RETURN n
   -c <output from hashcat>.txt, --cracked-hashes <output from hashcat>.txt
                         Used to show cleartext passwords. File must matc houtput of hashcat --show
+  -cc <output from proprietary tool>.csv, --cracked-hashes-csv <output from proprietary tool>.csv
+                        Used to show cleartext passwords. File must matc houtput of proprietary tool
   --username-only       only show usernames
   --ntlm-only           only show NTLM hashes
   --cleartext-only      only show cleartext
