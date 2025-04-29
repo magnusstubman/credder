@@ -133,14 +133,17 @@ def getCleartextCsv(ntlm, crackedLines):
   for line in crackedLines:
     line = line.replace('\n','')
     if ntlm in line:
-      parts = line.split('"')
+      #parts = line.split('"')
+      parts = line.split('","')
 
 
-      if len(parts) == 7:
-        return parts[3]
+      if len(parts) == 3:
+        return parts[1]
       else:
-        print('there is something wrong with your proprietary output! (3)', file=sys.stderr)
-        sys.exit(3)
+        print(len(parts))
+        print(parts)
+        print('there is something wrong with your proprietary output! (4)', file=sys.stderr)
+        sys.exit(4)
   return None
 
 def readLines(f, lower):
